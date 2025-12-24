@@ -35,23 +35,14 @@ def construct_training_set_IC(dt):
     #print (np.shape(x_train_IC)[0])
     return x_train_IC,y_train_IC
             
-def construct_training_set2(dx):
-    x = np.pi*np.arange(-1, 1.1 , dx, dtype = np.float32)
-    #print (np.shape(x))
-    x_train = np.zeros((np.size(x), 1, 2))
-    j=0
-    for i in x:
-        x_train[j][0][0] = i
-        j = j+1
-    #print (x_train)
-    #print ('x_train shape = ',np.shape(x_train))
-    y_train = np.array(boundery(x))
-    #print ('y_train[0] ',y_train[0])
-    #print ('y_train[0] shape ',np.shape(y_train[0]))
-    #print('x_train     = ',x_train)
-    #print('x_train[:1] = ',x_train[:1])
-    #print('x_train[:1] shape',np.shape(x_train[:1]))
-    return x_train, y_train[0]  
+def construct_training_set(dx,dt):
+    x_train_BC,y_train_BC = construct_training_set_BC(dx)
+    x_train_IC,y_train_IC = construct_training_set_IC(dt)    
+    x_train =  np.array(x_train_BC.tolist() + x_train_IC.tolist())
+    y_train =  np.array(y_train_BC.tolist() + y_train_IC.tolist())
+    print ('x_train = ',x_train)    
+    print ('y_train = ',y_train)
+    return x_train,y_train
 
 def init_model(num_hidden_layers=1, num_neurons_per_layer=2):
     model = tf.keras.Sequential()
@@ -96,23 +87,25 @@ def custom_mse_loss(y_true, y_pred):
 
 #--------------------MAIN-------------------------- 
 #x_train,y_train = construct_training_set2() # (21,1,2)
-x_train_BC,y_train_BC = construct_training_set_BC(0.1)   # (1,2)
-x_train_IC,y_train_IC = construct_training_set_IC(0.1)   # (1,2)
+#x_train_BC,y_train_BC = construct_training_set_BC(0.1)   # (1,2)
+#x_train_IC,y_train_IC = construct_training_set_IC(0.1)   # (1,2)
+x_train, y_train = construct_training_set(0.1,0.1)
 
 
 model = init_model()
-#model.summary()
+model.summary()
 
-sample_number = 1
-predictions_BC = model(x_train_BC[:sample_number]).numpy()
-predictions_IC = model(x_train_IC[:sample_number]).numpy()
-print (predictions_BC)
-print (predictions_IC)
+sample_number = 4
+predictions = model(x_train[:sample_number]).numpy()
+#predictions = model(x_train_IC[:sample_number]).numpy()
+print (predictions)
+# print (predictions_IC)
+
 
 
 
 #print ('loss_fn = ',loss_fn(y_train_BC[:sample_number],predictions).numpy())
-#print ('custom_mse_loss = ',custom_mse_loss(y_train_BC[:sample_number],predictions).numpy())
+print ('custom_mse_loss = ',custom_mse_loss(y_train[:sample_number],predictions).numpy())
 
 
 
