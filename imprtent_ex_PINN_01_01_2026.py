@@ -129,48 +129,45 @@ def excat_solution(model,r):
     return (du_dx_dx,du_dy_dy)
 
 
-def one_epoch(model,opt,x_train, y_train,dataset_S):    
-    for step, (x,y_true) in enumerate(dataset_S):
-        #l1 = loss_fn(y_train,model(x_train).numpy())   
-        #l1_c = tf.cast(l1, dtype=tf.float64)
-        x_variable = tf.Variable(x) 
-        with tf.GradientTape() as model_tape:
-            l1 = loss_fn(y_train,model(x_train))   
-            l1_c = tf.cast(l1, dtype=tf.float64)
+def one_epoch_fully_batched(model,opt,x_train, y_train,dataset_S,epoch_nnumber):    
+   
+    with tf.GradientTape() as model_tape:  
+        l1_temp = loss_fn(y_train,model(x_train))   
+        l1 = tf.cast(l1_temp, dtype=tf.float64)
+        
+        for step, (x,y_true) in enumerate(dataset_S):
+            x_variable = tf.Variable(x) 
             with tf.GradientTape(persistent=True) as loss_tape2:
-                loss_tape2.watch(x_variable)  # "The input x must be a tf.Variable or explicitly "watched" using tape.watch(x) to be tracked by GradientTape "    
+                loss_tape2.watch(x_variable) 
                 with tf.GradientTape(persistent=True) as loss_tape1:
                     loss_tape1.watch(x_variable)
                     u = model(x_variable)
                     grad_u = loss_tape1.gradient(u,x_variable)        
                 hessian_u = loss_tape2.jacobian(grad_u, x_variable)    
-            ux = grad_u[0][0]
-            ut = grad_u[0][1]
-            uxx = hessian_u[0][0][0][0]
-            u  = u.numpy()
-            #print ('u',np.shape(u))  
-            #print ('gradient: ',grad_u)
-            #print ('hessian',hessian_u)
-            l2 = ut + u*ux - (0.001)*uxx
-            l2_abs = tf.abs(l2)
-            #loss = tf.math.reduce_mean(l1_c+l2_abs)
-            #loss = tf.math.reduce_mean(l2_abs)    
-            loss = tf.math.reduce_mean(l1_c) 
+                ux = grad_u[0][0]
+                ut = grad_u[0][1]
+                uxx = hessian_u[0][0][0][0]
+                u  = u.numpy()          
+                l2_abs = tf.abs(ut + u*ux - (0.001)*uxx)
+                if step==0:
+                    l2 = l2_abs
+                else:         
+                    l2 = l2 + l2_abs
+                #print (step, l2)
+        loss = tf.math.reduce_mean(l1+l2)
         grad = model_tape.gradient(loss, model.trainable_variables)
-        #print ('step = ',step)
-        #print (grad)
-        #print ('')
         opt.apply_gradients(zip(grad, model.trainable_variables))
-        if step%20==0:
-            print(f"Step {step}: loss={loss.numpy()}")
+        #print ('l1 = ',l1)
+        #print ('l2 = ',l2)
+        print(f"epoch_nnumber {epoch_nnumber}: l1 = {l1} l2 = {l2} loss={loss.numpy()}")
     
     
     
     
 
-N_points=100
+N_points=30
 sample_number = 4
-N_epochs=5
+N_epochs=20
 loss_fn = tf.keras.losses.MeanSquaredError(reduction='sum_over_batch_size',name='mean_squared_error')
 x_train, y_train,x_train_S,  y_train_S = construct_training_set(0.1,0.1,N_points)
 x_train = tf.convert_to_tensor(x_train)
@@ -187,16 +184,18 @@ model.summary()
 #print (loss_fn(y_train[:sample_number],model(x_train[:sample_number]).numpy()))
 
 
-
-
-
-
 opt = Adam(learning_rate=0.01, beta_1=0.9, beta_2=0.99)
-one_epoch(model,opt,x_train, y_train,dataset_S)
+#one_epoch_fully_batched(model,opt,x_train, y_train,dataset_S,1)
 
-# for i in range(0,N_epochs):
-#     print ('epoch number = ',i)
-#     print ('-----------------')
+
+
+
+for i in range(0,N_epochs):
+    one_epoch_fully_batched(model,opt,x_train, y_train,dataset_S,i)
+
+
+
+
     
 # for step, (x,y_true) in enumerate(dataset_S):
 #     #l1 = loss_fn(y_train,model(x_train).numpy())   
