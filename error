@@ -1,0 +1,52 @@
+%runcell -i 0 '/raid/users/omri/pinnstf2/CODES/RAR with twist/trace_cap_curiculum_PINN_2.py'
+=== Spectrum-Guided Dual Collocation (TRR-DC) PINN ===
+Equation: STANDARD Burgers | Nu: 0.00159
+Curriculum: Trace Ratio Cap relaxes from 5.0 to 50.0
+L-BFGS Config: 1 Chunks
+
+--- Stage 0: Pre-training Anchors (1000 epochs) ---
+
+--- Stage 1: Adam Training (TRR-DC) ---
+Step:   500 | Adam  | Ratio/Cap:   0.0/  6.1 | Error: 57.64% | Add [PDE:0 BC:0 IC:0]
+---------------------------------------------------------------------------
+RuntimeError                              Traceback (most recent call last)
+File /raid/users/omri/pinnstf2/CODES/RAR with twist/trace_cap_curiculum_PINN_2.py:379
+    377 if epoch > 0 and epoch % PRINT_FREQ == 0:
+    378     if epoch % RESAMPLE_FREQ_ADAM == 0:
+--> 379         S_PDE_np, S_BC_np, S_IC_np, U_BC_np, U_IC_np, rho, t_pde, t_bc, t_ic, a_pde, a_bc, a_ic = trr_dc_update_step(
+    380             S_PDE_np, S_BC_np, S_IC_np, U_BC_np, U_IC_np, current_cap)
+    382         U_pred_l2 = model(X_flat_l2).numpy().reshape(X_grid_l2.shape)
+    383         rel_err = np.linalg.norm(U_exact_l2 - U_pred_l2) / np.linalg.norm(U_exact_l2)
+
+File /raid/users/omri/pinnstf2/CODES/RAR with twist/trace_cap_curiculum_PINN_2.py:305, in trr_dc_update_step(S_PDE, S_BC, S_IC, U_BC, U_IC, tau_cap)
+    303 for i in range(0, N_DENSE_GRID, BATCH_SIZE):
+    304     end_idx = min(i + BATCH_SIZE, N_DENSE_GRID)
+--> 305     res_out = compute_residuals_pde(
+    306         tf.cast(pool_PDE[i:end_idx, 0:1], tf.float64), 
+    307         tf.cast(pool_PDE[i:end_idx, 1:2], tf.float64)
+    308     )
+    309     res_pde[i:end_idx] = res_out.numpy().flatten()
+    311 idx_pde_cand = np.argsort(res_pde)[::-1]
+
+File ~/.local/lib/python3.11/site-packages/tensorflow/python/util/traceback_utils.py:153, in filter_traceback.<locals>.error_handler(*args, **kwargs)
+    151 except Exception as e:
+    152   filtered_tb = _process_traceback_frames(e.__traceback__)
+--> 153   raise e.with_traceback(filtered_tb) from None
+    154 finally:
+    155   del filtered_tb
+
+File /tmp/__autograph_generated_filedw15mkgq.py:18, in outer_factory.<locals>.inner_factory.<locals>.tf__compute_residuals_pde(x_col, t_col)
+     16         u = ag__.converted_call(ag__.ld(model), (ag__.converted_call(ag__.ld(tf).concat, ([ag__.ld(x_col), ag__.ld(t_col)],), dict(axis=1), fscope),), None, fscope)
+     17     u_x = ag__.converted_call(ag__.ld(tape1).gradient, (ag__.ld(u), ag__.ld(x_col)), None, fscope)
+---> 18     u_t = ag__.converted_call(ag__.ld(tape1).gradient, (ag__.ld(u), ag__.ld(t_col)), None, fscope)
+     19 u_xx = ag__.converted_call(ag__.ld(tape2).gradient, (ag__.ld(u_x), ag__.ld(x_col)), None, fscope)
+     20 tape2 = ag__.Undefined('tape2')
+
+RuntimeError: in user code:
+
+    File "/raid/users/omri/pinnstf2/CODES/RAR with twist/trace_cap_curiculum_PINN_2.py", line 239, in compute_residuals_pde  *
+        u_t = tape1.gradient(u, t_col)
+
+    RuntimeError: A non-persistent GradientTape can only be used to compute one set of gradients (or jacobians)
+
+
